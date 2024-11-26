@@ -24,7 +24,7 @@ var (
 func initializeDatabase() {
 
 	var err error
-	dsn := "YourDbName:YourPwd@tcp(127.0.0.1:3306)/YourDbName"
+	dsn := "xx:xx@tcp(xx:3306)/xx"
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		Logger.ErrorLogger.Println("Failed to open database: %v", err)
@@ -44,8 +44,8 @@ func initializeDatabase() {
 
 func (p *MyPlugin) Init() {
 
-	once.Do(initializeDatabase)
 	Logger.InfoLogger.Printf("Loaded Plugin: %s, version: %s, Author: %s\n", p.Name(), p.Version(), p.Author())
+	once.Do(initializeDatabase)
 
 }
 
@@ -70,10 +70,10 @@ func (p *MyPlugin) ProcessBegin(data *Proto.NetworkData, data2 interface{}, data
 			if strings.HasPrefix(data.TraceID, "RES") {
 				ReqType = 0
 			}
+			timestampSec := time.Now().Unix()
+			query := `INSERT INTO cd_flows (TraceID, RawData, ChunkNum, IsChunked, ServiceHost, ServicePort, reqType,node,create_time) VALUES (?, ?, ?, ?, ?, ?, ?,?,?) `
 
-			query := `INSERT INTO cd_flows (TraceID, RawData, ChunkNum, IsChunked, ServiceHost, ServicePort, reqType,node) VALUES (?, ?, ?, ?, ?, ?, ?,?) `
-
-			_, err := db.Exec(query, TraceID, hex.EncodeToString(data.RawData), data.ChunkNum, isChunkedInt, data.ServiceHost, data.ServicePort, ReqType, data2.(string))
+			_, err := db.Exec(query, TraceID, hex.EncodeToString(data.RawData), data.ChunkNum, isChunkedInt, data.ServiceHost, data.ServicePort, ReqType, data2.(string), timestampSec)
 
 			if err != nil {
 				Logger.InfoLogger.Println(err)
@@ -95,9 +95,11 @@ func (p *MyPlugin) ProcessEnd(data *Proto.NetworkData, data2 interface{}, data3 
 		TraceID = strings.TrimPrefix(TraceID, "REQ-")
 		TraceID = strings.TrimPrefix(TraceID, "RES-")
 
-		query := `INSERT INTO cd_regexresult (TraceID, node,matchedText, GroupName, ruleName) VALUES (?,?, ?, ?, ?)`
+		timestampSec := time.Now().Unix()
 
-		_, err := db.Exec(query, TraceID, data2.(string), data3.(string), data4.(Config.Group).GroupName, data5.(Config.Rule).Name)
+		query := `INSERT INTO cd_regexresult (TraceID, node,matchedText, regexgroups_id, regexrules_id,create_time) VALUES (?,?, ?, ?, ?,?)`
+
+		_, err := db.Exec(query, TraceID, data2.(string), data3.(string), data5.(Config.Rule).IDGroup, data5.(Config.Rule).IDRule, timestampSec)
 
 		if err != nil {
 			Logger.InfoLogger.Println(err)
@@ -113,7 +115,7 @@ func (p *MyPlugin) Name() string {
 }
 
 func (p *MyPlugin) Version() string {
-	return "1.1"
+	return "1.3"
 }
 
 func (p *MyPlugin) Author() string {
