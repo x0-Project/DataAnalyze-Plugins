@@ -48,7 +48,7 @@ func (p *MyPlugin) Init() {
 
 }
 
-func (p *MyPlugin) ProcessBegin(data *Proto.NetworkData, data2 interface{}, data3 interface{}) error {
+func (p *MyPlugin) ProcessBegin(data *Proto.NetworkData, params map[string]interface{}) error {
 
 	if db == nil {
 		log.Fatalf("Database must be initialized before calling ProcessEnd")
@@ -64,16 +64,18 @@ func (p *MyPlugin) ProcessBegin(data *Proto.NetworkData, data2 interface{}, data
 			TraceID := data.TraceID
 
 			ReqType := 0
-			if data.ReqType == "REQ"{
+			if data.ReqType == "REQ" {
 				ReqType = 1
-			}else{
+			} else {
 				ReqType = 0
 			}
 
 			timestampSec := time.Now().Unix()
 			query := `INSERT INTO cd_flows (TraceID, RawData, ChunkNum, IsChunked, ServiceHost, ServicePort, reqType,node,create_time) VALUES (?, ?, ?, ?, ?, ?, ?,?,?) `
 
-			_, err := db.Exec(query, TraceID, hex.EncodeToString(data.RawData), data.ChunkNum, isChunkedInt, data.ServiceHost, data.ServicePort, ReqType, data2.(string), timestampSec)
+			nodeName := params["nodename"].(string)
+
+			_, err := db.Exec(query, TraceID, hex.EncodeToString(data.RawData), data.ChunkNum, isChunkedInt, data.ServiceHost, data.ServicePort, ReqType, nodeName, timestampSec)
 
 			if err != nil {
 				Logger.InfoLogger.Println(err)
@@ -85,7 +87,7 @@ func (p *MyPlugin) ProcessBegin(data *Proto.NetworkData, data2 interface{}, data
 	return nil
 }
 
-func (p *MyPlugin) ProcessEnd(data *Proto.NetworkData, data2 interface{}, data3 interface{}, data4 interface{}, data5 interface{}) error {
+func (p *MyPlugin) ProcessEnd(data *Proto.NetworkData, params map[string]interface{}) error {
 
 	if db == nil {
 		log.Fatalf("Database must be initialized before calling ProcessEnd")
@@ -97,8 +99,15 @@ func (p *MyPlugin) ProcessEnd(data *Proto.NetworkData, data2 interface{}, data3 
 
 		query := `INSERT INTO cd_regexresult (TraceID, node,matchedText, regexgroups_id, regexrules_id,create_time) VALUES (?,?, ?, ?, ?,?)`
 
-		//_, err := db.Exec(query, TraceID, data2.(string), hex.EncodeToString([]byte(data3.(string))), data5.(Config.Rule).IDGroup, data5.(Config.Rule).IDRule, timestampSec)
-		_, err := db.Exec(query, TraceID, data2.(string), data3.(string), data5.(Config.Rule).IDGroup, data5.(Config.Rule).IDRule, timestampSec)
+		NodeName := params["NodeName"].(string)
+
+		matchText := params["matchedTextTmp"].(string)
+
+		IDGroup := params["ruleTmp"].(Config.Rule).IDGroup
+
+		IDRule := params["ruleTmp"].(Config.Rule).IDRule
+
+		_, err := db.Exec(query, TraceID, NodeName, matchText, IDGroup, IDRule, timestampSec)
 
 		if err != nil {
 			Logger.InfoLogger.Println(err)
@@ -114,7 +123,7 @@ func (p *MyPlugin) Name() string {
 }
 
 func (p *MyPlugin) Version() string {
-	return "1.5"
+	return "1.7"
 }
 
 func (p *MyPlugin) Author() string {
