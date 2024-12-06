@@ -1,5 +1,10 @@
 # DataAnalyze-Plugins
+
 Some plugins adapted to the DataAnalyze framework
+
+[开发规范](https://x0.pub/view/?view_id=9ca5ace6abff60e83fa9ca10a0b3e828&t=1733465392647)
+
+[框架介绍](https://x0.pub/view/?view_id=33fcb71eeafd765963a840fa191b71e2&t=1733465267113)
 
 ## How to compile
 
